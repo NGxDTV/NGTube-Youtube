@@ -13,6 +13,20 @@ A comprehensive Python library for scraping YouTube data, including videos, comm
 
 ## Installation
 
+### Option 1: Install as Package (Recommended)
+
+1. Clone or download the repository.
+2. Navigate to the project directory.
+3. Install the package using pip:
+
+```bash
+pip install .
+```
+
+This will install NGTube as a Python package with all dependencies automatically handled.
+
+### Option 2: Manual Installation
+
 1. Clone or download the repository.
 2. Ensure you have Python 3.6+ installed.
 3. Install required dependencies:
@@ -22,6 +36,16 @@ pip install requests demjson3
 ```
 
 4. Copy the `NGTube` folder to your project directory or add it to your Python path.
+
+### Using setup.py
+
+The `setup.py` file is used for packaging and installation. You can also install manually:
+
+```bash
+python setup.py install
+```
+
+However, using `pip install .` is recommended as it handles modern Python packaging better.
 
 ## Quick Start
 
