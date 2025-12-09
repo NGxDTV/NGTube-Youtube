@@ -26,7 +26,14 @@ class YouTubeCore:
         """
         self.url = url
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        }
+        # Cookies to bypass EU consent screen
+        self.cookies = {
+            'CONSENT': 'PENDING+987',
+            'SOCS': 'CAISHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg'
         }
 
     def fetch_html(self) -> str:
@@ -36,7 +43,7 @@ class YouTubeCore:
         Returns:
             str: The HTML content.
         """
-        response = requests.get(self.url, headers=self.headers)
+        response = requests.get(self.url, headers=self.headers, cookies=self.cookies)
         if response.status_code == 200:
             return response.text
         else:
