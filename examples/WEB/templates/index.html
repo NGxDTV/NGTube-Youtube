@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGTube // Retro Web Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⟨ NGTUBE ⟩</h1>
+            <p>:: YouTube Data Explorer ::</p>
+        </header>
+
+        <nav>
+            <button class="tab-button active" onclick="showTab('video', event)">🎬 Video</button>
+            <button class="tab-button" onclick="showTab('comments', event)">💬 Comments</button>
+            <button class="tab-button" onclick="showTab('channel', event)">📺 Channel</button>
+            <button class="tab-button" onclick="showTab('search', event)">🔎 Search</button>
+        </nav>
+
+        <div id="video" class="tab-content active">
+            <h2>Video Info</h2>
+            <form id="videoForm">
+                <div class="form-group">
+                    <label for="videoUrl">YouTube Video URL</label>
+                    <input type="url" id="videoUrl" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+                </div>
+                <button type="submit" class="submit-btn">▶ Extract Data</button>
+            </form>
+            <div id="videoResults" class="results"></div>
+        </div>
+
+        <div id="comments" class="tab-content">
+            <h2>Comments</h2>
+            <form id="commentsForm">
+                <div class="form-group">
+                    <label for="commentsUrl">YouTube Video URL</label>
+                    <input type="url" id="commentsUrl" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+                </div>
+                <div class="form-group">
+                    <label for="limit">Max Comments</label>
+                    <input type="number" id="limit" name="limit" value="10" min="1" max="100">
+                </div>
+                <button type="submit" class="submit-btn">▶ Load Comments</button>
+            </form>
+            <div id="commentsResults" class="results"></div>
+        </div>
+
+        <div id="channel" class="tab-content">
+            <h2>Channel Profile</h2>
+            <form id="channelForm">
+                <div class="form-group">
+                    <label for="channelUrl">YouTube Channel URL</label>
+                    <input type="url" id="channelUrl" name="url" placeholder="https://www.youtube.com/@channelname" required>
+                </div>
+                <div class="form-group">
+                    <label for="maxVideos">Max Videos</label>
+                    <input type="number" id="maxVideos" name="max_videos" value="5" min="1" max="50">
+                </div>
+                <button type="submit" class="submit-btn">▶ Get Profile</button>
+            </form>
+            <div id="channelResults" class="results"></div>
+        </div>
+
+        <div id="search" class="tab-content">
+            <h2>Search YouTube</h2>
+            <form id="searchForm">
+                <div class="form-group">
+                    <label for="query">Search Query</label>
+                    <input type="text" id="query" name="query" placeholder="Enter your search..." required>
+                </div>
+                <div class="form-group">
+                    <label for="filter">Filter</label>
+                    <select id="filter" name="filter">
+                        <option value="">All Results</option>
+                        <option value="VIDEOS_TODAY">Videos (Today)</option>
+                        <option value="CHANNELS">Channels</option>
+                        <option value="PLAYLISTS">Playlists</option>
+                        <option value="MOVIES">Movies</option>
+                        <option value="LAST_HOUR">Last Hour</option>
+                        <option value="SORT_BY_DATE">Sort by Date</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="maxResults">Max Results</label>
+                    <input type="number" id="maxResults" name="max_results" value="10" min="1" max="50">
+                </div>
+                <button type="submit" class="submit-btn">▶ Search</button>
+            </form>
+            <div id="searchResults" class="results"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}?v=4"></script>
+</body>
+</html>
