@@ -2,50 +2,74 @@
 NGTube Search Usage Example
 
 This example demonstrates how to use the Search class to perform YouTube searches
-and extract video results.
+and extract video results with various filters.
 """
 
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from NGTube import Search
+from NGTube import Search, SearchFilters
 import json
 
 def main():
-    # Example search query
-    query = "Python programming tutorials"
+    # Example 1: Basic search
+    print("=== Basic Search ===")
+    search_basic = Search("Python programming", max_results=10)
+    search_basic.perform_search()
+    results_basic = search_basic.get_results()
+    print(f"Query: {results_basic['query']}")
+    print(f"Estimated results: {results_basic['estimated_results']}")
+    print(f"Loaded items: {results_basic['loaded_items']}")
+    videos = [item for item in results_basic['items'] if item['type'] == 'video']
+    print(f"Videos: {len(videos)}")
+    print()
 
-    # Create a Search instance with a maximum of 200 results
-    search = Search(query, max_results=200)
+    # Example 2: Search with filter for channels only
+    print("=== Search Channels Only ===")
+    search_channels = Search("Python programming", max_results=10, filter=SearchFilters.CHANNELS)
+    search_channels.perform_search()
+    results_channels = search_channels.get_results()
+    print(f"Query: {results_channels['query']}")
+    print(f"Filter: {results_channels['filter']} (Channels only)")
+    print(f"Params: {results_channels['params']}")
+    print(f"Estimated results: {results_channels['estimated_results']}")
+    print(f"Loaded items: {results_channels['loaded_items']}")
+    channels = [item for item in results_channels['items'] if item['type'] == 'channel']
+    print(f"Channels: {len(channels)}")
+    for channel in channels[:3]:
+        print(f"  Channel: {channel['title']} - {channel.get('subscriberCount', 'N/A')}")
+    print()
 
-    # Perform the search
-    print(f"Searching for: {query}")
-    search.perform_search()
+    # Example 3: Search videos uploaded today
+    print("=== Search Videos Uploaded Today ===")
+    search_today = Search("Python programming", max_results=10, filter=SearchFilters.VIDEOS_TODAY)
+    search_today.perform_search()
+    results_today = search_today.get_results()
+    print(f"Query: {results_today['query']}")
+    print(f"Filter: {results_today['filter']} (Videos uploaded today)")
+    print(f"Params: {results_today['params']}")
+    print(f"Estimated results: {results_today['estimated_results']}")
+    print(f"Loaded items: {results_today['loaded_items']}")
+    print()
 
-    # Get the results
-    results = search.get_results()
+    # Example 4: Search sorted by upload date
+    print("=== Search Sorted by Upload Date ===")
+    search_date = Search("Python programming", max_results=10, filter=SearchFilters.SORT_BY_DATE)
+    search_date.perform_search()
+    results_date = search_date.get_results()
+    print(f"Query: {results_date['query']}")
+    print(f"Filter: {results_date['filter']} (Sorted by upload date)")
+    print(f"Params: {results_date['params']}")
+    print(f"Estimated results: {results_date['estimated_results']}")
+    print(f"Loaded items: {results_date['loaded_items']}")
+    print()
 
-    # Print summary
-    print(f"Estimated total results: {results['estimated_results']}")
-    print(f"Loaded videos: {results['loaded_videos']}")
-    print("\nFirst 5 video results:")
+    # Save one example to file
+    with open("search_filtered_example.json", "w", encoding="utf-8") as f:
+        json.dump(results_channels, f, indent=4, ensure_ascii=False)
 
-    # Print first 5 videos
-    for i, video in enumerate(results['videos'][:5], 1):
-        print(f"\n{i}. {video['title']}")
-        print(f"   Channel: {video['channel']}")
-        print(f"   Views: {video['viewCount']}")
-        print(f"   Duration: {video['length']}")
-        print(f"   Published: {video['publishedTime']}")
-        print(f"   Video ID: {video['videoId']}")
-        print(f"   URL: https://www.youtube.com/watch?v={video['videoId']}")
-
-    # Save results to a JSON file
-    with open("search_example_results.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=4, ensure_ascii=False)
-
-    print(f"\nFull results saved to search_example_results.json")
+    print("Filtered search results saved to search_filtered_example.json")
 
 if __name__ == "__main__":
     main()
