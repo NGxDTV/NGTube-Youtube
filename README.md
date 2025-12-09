@@ -2,6 +2,10 @@
 
 A comprehensive Python library for scraping YouTube data, including videos, comments, and channel profiles.
 
+## ⚠️ Disclaimer
+
+**This library is provided for educational and research purposes only.** Scraping YouTube data may violate YouTube's Terms of Service. Use at your own risk. The authors are not responsible for any misuse or legal consequences. Always respect robots.txt and implement appropriate rate limiting.
+
 ## Features
 
 - **Video Extraction**: Extract detailed metadata from YouTube videos (title, views, likes, duration, tags, description, etc.)
