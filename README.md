@@ -1,4 +1,4 @@
-# NGTube
+# NGTube - YouTube Scraper
 
 A comprehensive Python library for scraping YouTube data, including videos, comments, and channel profiles.
 
