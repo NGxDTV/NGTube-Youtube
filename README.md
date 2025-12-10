@@ -165,6 +165,8 @@ profile = channel.extract_profile(max_videos='all')
 # - title, description, channel_id, channel_url
 # - keywords, is_family_safe, links
 # - subscriber_count_text, view_count_text, video_count_text
+# - avatar (list of thumbnail dictionaries with url, width, height)
+# - banner (list of banner image dictionaries with url, width, height)
 # - featured_video (dict with videoId, title, description)
 # - videos (list of video dictionaries)
 # - reels (list of reel dictionaries)
