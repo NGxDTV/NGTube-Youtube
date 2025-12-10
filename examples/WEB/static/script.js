@@ -291,6 +291,7 @@ function renderChannelInfo(data) {
                     </div>
                     <div class="video-item-actions">
                         <button class="video-item-btn info-btn" onclick="openVideoInfo('${reel.videoId}')">🎬 Info</button>
+                        <button class="video-item-btn comments-btn" onclick="openVideoComments('${reel.videoId}')">💬 Comments</button>
                     </div>
                 </div>
             </div>
