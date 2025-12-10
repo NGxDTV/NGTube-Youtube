@@ -203,29 +203,13 @@ function renderComments(data) {
 function renderChannelInfo(data) {
     if (!data) return '<div class="error">No data received</div>';
 
-    // Extract subscriber count
-    const subscriberText = data.subscriberCountText || data.subscribers || data.subscriber_count_text || '0';
-    let subscriberCount = 0;
-    if (typeof subscriberText === 'string') {
-        const match = subscriberText.match(/([\d.,]+)/);
-        if (match) {
-            subscriberCount = parseInt(match[1].replace(/[.,]/g, ''));
-        }
-    } else if (typeof subscriberText === 'number') {
-        subscriberCount = subscriberText;
-    }
-
-    // Extract video count
-    const videoText = data.videoCountText || data.video_count || data.video_count_text || '0';
-    let videoCount = 0;
-    if (typeof videoText === 'string') {
-        const match = videoText.match(/(\d+)/);
-        if (match) {
-            videoCount = parseInt(match[1]);
-        }
-    } else if (typeof videoText === 'number') {
-        videoCount = videoText;
-    }
+    // Extract stats from data.stats if available
+    const stats = data.stats || {};
+    const subscriberCount = stats.subscribers || 0;
+    const videoCount = stats.video_count || 0;
+    const loadedVideosCount = stats.loaded_videos_count || 0;
+    const loadedReelsCount = stats.loaded_reels_count || 0;
+    const loadedPlaylistsCount = stats.loaded_playlists_count || 0;
 
     // Get channel avatar - might be in different places
     const channelAvatar = data.avatar?.[0]?.url || data.thumbnails?.[0]?.url || null;
@@ -280,6 +264,61 @@ function renderChannelInfo(data) {
         `;
     }).join('');
 
+    // Render reels with thumbnails
+    const reelsHtml = data.reels && data.reels.length > 0 ? data.reels.map(reel => {
+        // Get reel thumbnail
+        const reelThumb = getBestThumbnail(reel.thumbnails, 320) || 
+                         (reel.videoId ? `https://i.ytimg.com/vi/${reel.videoId}/mqdefault.jpg` : null);
+        
+        return `
+            <div class="video-item">
+                <div class="video-item-thumbnail">
+                    ${reelThumb ? 
+                        `<img src="${reelThumb}" alt="" onerror="this.parentElement.innerHTML='<div class=\\'no-thumbnail\\'></div>'">` :
+                        '<div class="no-thumbnail"></div>'
+                    }
+                    <span class="video-item-duration">REEL</span>
+                </div>
+                <div class="video-item-content">
+                    <div class="video-item-title">${escapeHtml(reel.title || 'Unknown Title')}</div>
+                    <div class="video-item-meta">
+                        <span>${reel.viewCountText || '0 views'}</span>
+                    </div>
+                    <div class="video-item-actions">
+                        <button class="video-item-btn info-btn" onclick="openVideoInfo('${reel.videoId}')">🎬 Info</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('') : '';
+
+    // Render playlists with thumbnails
+    const playlistsHtml = data.playlists && data.playlists.length > 0 ? data.playlists.map(playlist => {
+        // Get playlist thumbnail
+        const playlistThumb = getBestThumbnail(playlist.thumbnails, 320);
+        
+        return `
+            <div class="video-item">
+                <div class="video-item-thumbnail">
+                    ${playlistThumb ? 
+                        `<img src="${playlistThumb}" alt="" onerror="this.parentElement.innerHTML='<div class=\\'no-thumbnail\\'></div>'">` :
+                        '<div class="no-thumbnail"></div>'
+                    }
+                    <span class="video-item-duration">PLAYLIST</span>
+                </div>
+                <div class="video-item-content">
+                    <div class="video-item-title">${escapeHtml(playlist.title || 'Unknown Playlist')}</div>
+                    <div class="video-item-meta">
+                        <span>${playlist.videoCountText || '0 videos'}</span>
+                    </div>
+                    <div class="video-item-actions">
+                        <button class="video-item-btn" onclick="window.open('https://www.youtube.com/playlist?list=${playlist.playlistId}', '_blank')">📺 Open</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('') : '';
+
     // Store data for load more BEFORE returning
     currentChannelData = data;
     currentLoadedVideos = uniqueVideos.length;
@@ -304,6 +343,22 @@ function renderChannelInfo(data) {
                     <div class="channel-stat-label">Videos</div>
                     <div class="channel-stat-value">${formatNumber(videoCount)}</div>
                 </div>
+                <div class="channel-stat">
+                    <div class="channel-stat-label">Loaded Videos</div>
+                    <div class="channel-stat-value">${formatNumber(loadedVideosCount)}</div>
+                </div>
+                ${loadedReelsCount > 0 ? `
+                <div class="channel-stat">
+                    <div class="channel-stat-label">Loaded Reels</div>
+                    <div class="channel-stat-value">${formatNumber(loadedReelsCount)}</div>
+                </div>
+                ` : ''}
+                ${loadedPlaylistsCount > 0 ? `
+                <div class="channel-stat">
+                    <div class="channel-stat-label">Loaded Playlists</div>
+                    <div class="channel-stat-value">${formatNumber(loadedPlaylistsCount)}</div>
+                </div>
+                ` : ''}
             </div>
         </div>
         ${videosHtml ? `
@@ -312,6 +367,14 @@ function renderChannelInfo(data) {
             <div class="load-more-container">
                 <button class="load-more-btn" onclick="loadMoreChannelVideos()" id="loadMoreBtn">+ Load More Videos</button>
             </div>
+        ` : ''}
+        ${reelsHtml ? `
+            <div class="videos-section-title">Recent Reels (${data.reels.length})</div>
+            <div class="videos-grid">${reelsHtml}</div>
+        ` : ''}
+        ${playlistsHtml ? `
+            <div class="videos-section-title">Recent Playlists (${data.playlists.length})</div>
+            <div class="videos-grid">${playlistsHtml}</div>
         ` : ''}
     `;
 }
