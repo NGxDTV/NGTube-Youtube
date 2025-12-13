@@ -208,7 +208,7 @@ class YouTubeCore:
                 return None
             visitor_data = find_visitor_data(yt_initial_data)
             return visitor_data or ""
-        except:
+        except Exception:
             return ""
 
     def make_api_request(self, endpoint: str, payload: dict) -> dict:

@@ -36,7 +36,7 @@ class Shorts:
                 "client": {
                     "hl": "de",
                     "gl": "DE",
-                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 OPR/124.0.0.0,gzip(gfe)",
+                    "visitorData": self.visitor_data,
                     "clientName": "WEB",
                     "clientVersion": self.client_version
                 },
@@ -205,7 +205,7 @@ class Shorts:
 
         return data
 
-    def fetch_comments(self, continuation_token: str = None) -> list:
+    def fetch_comments(self, continuation_token: str | None = None) -> list:
         """
         Fetch comments for the current short.
 
@@ -229,13 +229,9 @@ class Shorts:
                     "hl": "de",
                     "gl": "DE",
                     "visitorData": self.visitor_data,
-                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 OPR/124.0.0.0,gzip(gfe)",
                     "clientName": "WEB",
                     "clientVersion": self.client_version,
-                    "osName": "Windows",
-                    "osVersion": "10.0",
-                    "originalUrl": "https://www.youtube.com/",
-                    "platform": "DESKTOP"
+                    "originalUrl": "https://www.youtube.com/"
                 },
                 "request": {
                     "useSsl": True
