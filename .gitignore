@@ -17,3 +17,4 @@ search_filtered_example.json
 *.pyo
 __pycache__/
 example_output.json
+channel_profile.json

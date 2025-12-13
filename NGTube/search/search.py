@@ -50,6 +50,7 @@ class Search:
         self.estimated_results = 0
         self.core = YouTubeCore("https://www.youtube.com")
         self.visitor_data = self.core.extract_visitor_data(self.core.fetch_html())
+        self.client_version = self.core.get_client_version("2.20251208.06.00")
         self.url = "https://www.youtube.com/youtubei/v1/search?prettyPrint=false"
         self.payload = {
             "context": {
@@ -57,7 +58,7 @@ class Search:
                     "hl": "de",
                     "gl": "DE",
                     "clientName": "WEB",
-                    "clientVersion": "2.20251208.06.00",
+                    "clientVersion": self.client_version,
                     "visitorData": self.visitor_data
                 }
             },

@@ -27,6 +27,8 @@ class YouTubeCore:
             url (str): The YouTube URL.
         """
         self.url = url
+        self._cached_html = None
+        self._client_version = None
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
@@ -62,11 +64,15 @@ class YouTubeCore:
         Returns:
             str: The HTML content.
         """
+        if self._cached_html:
+            return self._cached_html
+
         response = self.session.get(self.url, timeout=10)
-        if response.status_code == 200:
-            return response.text
-        else:
+        if response.status_code != 200:
             raise Exception(f"Failed to fetch HTML: {response.status_code}")
+
+        self._cached_html = response.text
+        return self._cached_html
 
     def extract_ytinitialdata(self, html: str) -> dict:
         """
@@ -221,3 +227,19 @@ class YouTubeCore:
             return response.json()
         else:
             raise Exception(f"API request failed: {response.status_code}")
+
+    def get_client_version(self, fallback: str = "2.20251208.06.00") -> str:
+        """
+        Extract clientVersion from the page HTML, with optional fallback.
+        """
+        if self._client_version:
+            return self._client_version
+        try:
+            html = self.fetch_html()
+            match = re.search(r'"clientVersion"\s*:\s*"([^"]+)"', html)
+            if match:
+                self._client_version = match.group(1)
+                return self._client_version
+        except Exception:
+            pass
+        return fallback
