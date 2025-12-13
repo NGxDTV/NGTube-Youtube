@@ -90,9 +90,15 @@ from NGTube import Comments
 
 url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 comments = Comments(url)
-comment_data = comments.get_comments()
 
+# Load all comments
+comment_data = comments.get_comments()
 print(f"Total comments: {len(comment_data['comments'])}")
+
+# Load limited number of comments (faster)
+comment_data_limited = comments.get_comments(max_comments=50)
+print(f"Limited comments: {len(comment_data_limited['comments'])}")
+
 for comment in comment_data['comments'][:3]:
     print(f"{comment['author']}: {comment['text'][:50]}...")
 ```
@@ -120,7 +126,7 @@ print("Total videos:", profile_all['stats']['loaded_videos_count'])
 ### Fetch Random Shorts
 
 ```python
-from NGTube import Shorts
+from NGTube import Shorts, Comments
 
 shorts = Shorts()
 
@@ -130,6 +136,11 @@ print("Title:", short_data['title'])
 print("Video ID:", short_data['video_id'])
 print("Channel:", short_data['channel_name'])
 print("Thumbnail:", short_data['thumbnail'][0]['url'])
+
+# Fetch comments for the short (same as regular videos)
+comments = Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}")
+comment_data = comments.get_comments(max_comments=20)  # Limit comments
+print(f"Comments: {len(comment_data['comments'])}")
 
 # Fetch multiple shorts from the feed
 shorts_feed = shorts.fetch_shorts_feed(max_shorts=20)
@@ -161,15 +172,20 @@ metadata = video.extract_metadata()
 from NGTube import Comments
 
 comments = Comments("https://www.youtube.com/watch?v=VIDEO_ID")
+
+# Load all comments
 data = comments.get_comments()
+
+# Load limited number of comments (recommended for performance)
+data_limited = comments.get_comments(max_comments=100)
 
 # Returns dictionary with:
 # - 'top_comment': list of top comments
 # - 'comments': list of regular comments
 
 # Each comment contains:
-# - author, text, like_count, published_time_text
-# - author_thumbnail, comment_id, reply_count
+# - author, text, likeCount, publishedTimeText
+# - authorThumbnail, commentId, replyCount
 ```
 
 ### Channel Class
@@ -201,15 +217,16 @@ profile = channel.extract_profile(max_videos='all')
 ### Shorts Class
 
 ```python
-from NGTube import Shorts
+from NGTube import Shorts, Comments
 
 shorts = Shorts()
 
 # Fetch a random short from YouTube's homepage
 short_data = shorts.fetch_short()
 
-# Fetch comments for the short
-comments = shorts.fetch_comments()
+# Fetch comments for the short (same as regular videos)
+comments_obj = Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}")
+comment_data = comments_obj.get_comments(max_comments=50)
 
 # Fetch multiple shorts from the Shorts feed (unlimited)
 shorts_feed = shorts.fetch_shorts_feed(max_shorts=50)
@@ -228,10 +245,9 @@ shorts_feed = shorts.fetch_shorts_feed(max_shorts=50)
 # - comment_count: Number of comments
 # - publish_date: Publication date
 # - sequence_continuation: Token for fetching next short in sequence
-# - comments_continuation: Token for fetching comments
 
-# Shorts feed data structure (basic metadata):
-# - video_id: The YouTube video ID
+# Comments for shorts work exactly like regular videos:
+# Use Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}").get_comments(max_comments=N)
 # - title: The title of the short (may be empty for some)
 # - thumbnail: Thumbnail URL
 # - view_count: Number of views (text format)
@@ -334,7 +350,8 @@ Extract video metadata.
 Extract video comments.
 
 - `__init__(url: str)`: Initialize with video URL
-- `get_comments() -> dict`: Extract and return comments data
+- `get_comments(max_comments: int = None) -> dict`: Extract and return comments data
+  - `max_comments`: Optional limit for number of comments to load (None = all available)
 
 #### Channel
 Extract channel profile and videos.
@@ -359,7 +376,10 @@ Fetch random shorts from YouTube.
 
 - `__init__(country: dict = None)`: Initialize with optional country filter
 - `fetch_short() -> dict`: Fetch a random short
-- `fetch_comments() -> list`: Fetch comments for the current short
+- `fetch_shorts_feed(max_shorts: int = 50) -> list`: Fetch multiple shorts from feed
+
+*Note: Comments for shorts work exactly like regular videos using the Comments class:
+`Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}").get_comments(max_comments=N)`*
 
 ### Utils Module
 
@@ -453,8 +473,9 @@ Fetch random shorts from YouTube.
 ## Limitations
 
 - **Rate Limiting**: YouTube may rate-limit requests. Add delays between requests for bulk operations.
-- **Comment Limits**: Without authentication, typically 40-50 comments can be loaded per video.
+- **Comment Limits**: Comments can be limited using the `max_comments` parameter in `get_comments(max_comments=N)`. Without limits, YouTube may restrict the number of comments loaded.
 - **Video Limits**: Channel video extraction may be limited by YouTube's pagination.
+- **Shorts Comments**: Shorts use the same comment system as regular videos, so unlimited comments are supported.
 - **Terms of Service**: This library is for educational purposes. Respect YouTube's Terms of Service and robots.txt.
 
 ## Troubleshooting
