@@ -14,7 +14,7 @@ from NGTube import Video, Comments
 
 def main():
     # YouTube video URL
-    url = "https://www.youtube.com/watch?v=y1XrJyFF1O0"
+    url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
     print("=== NGTube Basic Usage Example ===\n")
 
@@ -46,7 +46,7 @@ def main():
     # Extract comments
     print("2. Extracting comments...")
     comments = Comments(url)
-    comment_data = comments.get_comments()
+    comment_data = comments.get_comments(max_comments=100)  # Limit to 100 comments for this example
     top_comments = comment_data.get('top_comment', [])
     comment_list = comment_data.get('comments', [])
 

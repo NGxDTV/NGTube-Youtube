@@ -48,7 +48,7 @@ def get_comments():
         limit = int(request.form.get('limit', 10))
 
         comments = Comments(url)
-        data = comments.get_comments()
+        data = comments.get_comments(max_comments=limit)
 
         # Limit comments
         data['comments'] = data['comments'][:limit]
@@ -95,7 +95,7 @@ def get_shorts():
 
         # Load comments for the short using the normal Comments class
         comments_obj = Comments(f"https://www.youtube.com/watch?v={video_id}")
-        comments_data = comments_obj.get_comments()
+        comments_data = comments_obj.get_comments(max_comments=limit)
         comments = comments_data['comments'][:limit]  # Apply limit
 
         # Combine short data with comments

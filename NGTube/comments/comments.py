@@ -129,12 +129,13 @@ class Comments:
                     find_top_comments(item)
         find_top_comments(data)
 
-    def load_more_comments(self, data: dict):
+    def load_more_comments(self, data: dict, max_comments: Optional[int] = None):
         """
         Load additional comments via YouTube's API.
 
         Args:
             data (dict): The ytInitialData JSON.
+            max_comments (int, optional): Maximum number of comments to load. If None, loads all available.
         """
         # Find continuation token and load more comments
         continuation_token = None
@@ -169,7 +170,7 @@ class Comments:
             current_continuation = continuation_token
             max_calls = 50  # Increased from 10 to allow loading more comments
             call_count = 0
-            while current_continuation and call_count < max_calls:
+            while current_continuation and call_count < max_calls and (max_comments is None or len(self.comments) < max_comments):
                 payload = {
                     "context": {
                         "client": {
@@ -250,9 +251,12 @@ class Comments:
                 current_continuation = next_continuation
                 call_count += 1
 
-    def get_comments(self) -> dict:
+    def get_comments(self, max_comments: Optional[int] = None) -> dict:
         """
         Get all available comments for the video, separated into top comments and regular comments.
+
+        Args:
+            max_comments (int, optional): Maximum number of comments to load. If None, loads all available.
 
         Returns:
             dict: Dictionary with 'top_comment' and 'comments' lists.
@@ -260,7 +264,7 @@ class Comments:
         html = self.core.fetch_html()
         data = self.core.extract_ytinitialdata(html)
         self.extract_initial_comments(data)
-        self.load_more_comments(data)
+        self.load_more_comments(data, max_comments)
         return {
             'top_comment': self.top_comments,
             'comments': self.comments

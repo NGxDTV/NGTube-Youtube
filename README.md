@@ -73,7 +73,7 @@ However, using `pip install .` is recommended as it handles modern Python packag
 ```python
 from NGTube import Video
 
-url = "https://www.youtube.com/watch?v=y1XrJyFF1O0"
+url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 video = Video(url)
 metadata = video.extract_metadata()
 
@@ -88,7 +88,7 @@ print("Duration:", metadata['duration_seconds'], "seconds")
 ```python
 from NGTube import Comments
 
-url = "https://www.youtube.com/watch?v=y1XrJyFF1O0"
+url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 comments = Comments(url)
 comment_data = comments.get_comments()
 

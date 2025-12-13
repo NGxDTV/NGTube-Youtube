@@ -39,7 +39,7 @@ def main():
             print("Fetching comments...")
             from NGTube import Comments
             comments_obj = Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}")
-            comments_data = comments_obj.get_comments()
+            comments_data = comments_obj.get_comments(max_comments=50)  # Limit to 50 for demo
             comments = comments_data['comments']
             print(f"Found {len(comments)} comments")
             print()
