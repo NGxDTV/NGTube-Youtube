@@ -1,167 +1,171 @@
-# NGTube - YouTube Scraper
+# NGTube – YouTube Scraper
 
-A comprehensive Python library for scraping YouTube data, including videos, comments, and channel profiles.
+A comprehensive Python library for scraping YouTube data, including **videos, comments, channels, shorts, and search results**, without using the official YouTube Data API.
+
+NGTube focuses on **structured, continuation-based extraction** and is designed for developers who need **complete and reproducible datasets** for research, analysis, or tooling.
+
+---
 
 ## ⚠️ Disclaimer
 
-**This library is provided for educational and research purposes only.** Scraping YouTube data may violate YouTube's Terms of Service. Use at your own risk. The authors are not responsible for any misuse or legal consequences. Always respect robots.txt and implement appropriate rate limiting.
+**This project is provided strictly for educational and research purposes.**
+
+Scraping YouTube may violate YouTube’s Terms of Service. By using this library, you acknowledge that:
+
+* You are responsible for complying with YouTube’s Terms of Service
+* You use this library at your own risk
+* The author is not liable for misuse or legal consequences
+
+Always respect `robots.txt`, apply **rate limiting**, and avoid abusive traffic.
+
+---
+
+## Why NGTube?
+
+NGTube is **not** a downloader. It is a **low-level data scraper** designed for completeness and transparency.
+
+Key differentiators:
+
+* No official YouTube API key required
+* Continuation-based pagination (comments, videos, shorts)
+* Full channel profile extraction
+* Shorts scraping with metadata + comments
+* Country & language localization
+* Clean, JSON-compatible output
+* Modular, class-based design
+
+---
 
 ## Features
 
-- **Video Extraction**: Extract detailed metadata from YouTube videos (title, views, likes, duration, tags, description, etc.)
-- **Comment Extraction**: Extract comments from videos, including loading additional comments via YouTube's internal API
-- **Channel Extraction**: Extract complete channel profile data (subscribers, description, featured video, video list with continuation support)
-- **Shorts Extraction**: Fetch random shorts from YouTube's homepage with metadata and comments, and load unlimited shorts from the Shorts feed
-- **Search Functionality**: Search YouTube with various filters (videos, channels, playlists, etc.) and country localization
-- **Country Localization**: Support for different countries/regions (US, DE, UK, FR, etc.) for all API requests
-- **Flexible Video Loading**: Load specific number of videos or all available videos from a channel
-- **Clean Data Output**: Structured JSON-compatible data output
-- **Modular Design**: Separate classes for different extraction tasks
+* **Video Extraction**
+  Extract full video metadata (title, views, likes, duration, tags, description, category, publish dates, etc.)
+
+* **Comment Extraction**
+  Load top comments and regular comments, with optional limits or full continuation loading
+
+* **Channel Extraction**
+  Extract channel profiles including subscribers, description, featured video, banners, avatars, and full video lists
+
+* **Shorts Extraction**
+  Fetch random Shorts from the homepage or load large batches from the Shorts feed, including metadata and comments
+
+* **Search**
+  Perform YouTube searches with filters (videos, channels, playlists, upload time, sorting)
+
+* **Country Localization**
+  All requests support country and language filters (US, DE, UK, FR, ES, IT, JP, etc.)
+
+* **Flexible Limits**
+  Load a fixed number of videos/comments or everything available
+
+* **Structured Output**
+  All data is returned as clean, JSON-ready Python dictionaries
+
+---
 
 ## Installation
 
-### 🚀 Quick Install (Recommended)
+### Recommended
 
 ```bash
 pip install NGTube
 ```
 
-That's it! NGTube is now available on PyPI and ready to use.
+Python **3.6+** is required.
 
-### Option 1: Install from PyPI (Stable)
+Dependencies:
 
-```bash
-pip install NGTube
-```
+* `requests`
+* `demjson3`
 
-### Option 2: Install from Source
-
-1. Clone or download the repository.
-2. Navigate to the project directory.
-3. Install the package using pip:
-
-```bash
-pip install .
-```
-
-### Option 3: Manual Installation
-
-1. Clone or download the repository.
-2. Ensure you have Python 3.6+ installed.
-3. Install required dependencies:
-
-```bash
-pip install requests demjson3
-```
-
-4. Copy the `NGTube` folder to your project directory or add it to your Python path.
-
-### Using setup.py
-
-The `setup.py` file is used for packaging and installation. You can also install manually:
-
-```bash
-python setup.py install
-```
-
-However, using `pip install .` is recommended as it handles modern Python packaging better.
+---
 
 ## Quick Start
 
-### Extract Video Metadata
+### Video Metadata
 
 ```python
 from NGTube import Video
 
-url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-video = Video(url)
-metadata = video.extract_metadata()
+video = Video("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+data = video.extract_metadata()
 
-print("Title:", metadata['title'])
-print("Views:", metadata['view_count'])
-print("Likes:", metadata['like_count'])
-print("Duration:", metadata['duration_in_seconds'], "seconds")
+print(data["title"])
+print(data["view_count"])
+print(data["like_count"])
+print(data["duration_in_seconds"])
 ```
 
-### Extract Comments
+---
+
+### Comments
 
 ```python
 from NGTube import Comments
 
-url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-comments = Comments(url)
+comments = Comments("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
-# Load all comments - Dont use it with dQw4w9WgXcQ, this video has 2.400.000 Comments
-comment_data = comments.get_comments()
-print(f"Total comments: {len(comment_data['comments'])}")
+# Load limited comments (recommended)
+data = comments.get_comments(max_comments=50)
 
-# Load limited number of comments (faster)
-comment_data_limited = comments.get_comments(max_comments=50)
-print(f"Limited comments: {len(comment_data_limited['comments'])}")
-
-for comment in comment_data['comments'][:3]:
-    print(f"{comment['author']}: {comment['text'][:50]}...")
+for comment in data["comments"][:3]:
+    print(comment["author"], comment["text"])
 ```
 
-### Extract Channel Profile
+⚠️ Avoid loading all comments on very large videos.
+
+---
+
+### Channel Profile
 
 ```python
 from NGTube import Channel
 
-url = "https://www.youtube.com/@RickAstleyYT"
-channel = Channel(url)
+channel = Channel("https://www.youtube.com/@RickAstleyYT")
 
-# Load first 10 videos
 profile = channel.extract_profile(max_videos=10)
 
-print(profile)
-
-print("Channel Title:", profile['title'])
-print("Subscribers:", profile['subscribers'])
-print("Videos loaded:", profile['loaded_videos_count'])
-
-# Load all videos
-profile_all = channel.extract_profile(max_videos='all')
-print("Total videos:", profile_all['loaded_videos_count'])
+print(profile["title"])
+print(profile["subscribers"])
+print(profile["loaded_videos_count"])
 ```
 
-### Fetch Random Shorts
+To load **all** videos:
+
+```python
+profile = channel.extract_profile(max_videos="all")
+```
+
+---
+
+### Shorts
 
 ```python
 from NGTube import Shorts, Comments
 
 shorts = Shorts()
 
-# Fetch a single random short
-short_data = shorts.fetch_short()
-print("Title:", short_data['title'])
-print("Video ID:", short_data['video_id'])
-print("Channel:", short_data['channel_name'])
-print("Thumbnail:", short_data['thumbnail'][0]['url'])
+short = shorts.fetch_short()
+print(short["video_id"], short["title"])
 
-# Fetch comments for the short (same as regular videos)
-comments = Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}")
-comment_data = comments.get_comments(max_comments=20)  # Limit comments
-print(f"Comments: {len(comment_data['comments'])}")
-
-# Fetch multiple shorts from the feed
-shorts_feed = shorts.fetch_shorts_feed(max_shorts=20)
-print(f"Loaded {len(shorts_feed)} shorts from feed")
-for short in shorts_feed[:3]:
-    print(f"Short: {short['video_id']}")
+comments = Comments(f"https://www.youtube.com/watch?v={short['video_id']}")
+short_comments = comments.get_comments(max_comments=20)
 ```
 
-## Detailed Usage
-
-### Video Class
+Load multiple Shorts from the feed:
 
 ```python
-from NGTube import Video
+feed = shorts.fetch_shorts_feed(max_shorts=20)
+```
 
-video = Video("https://www.youtube.com/watch?v=VIDEO_ID")
-metadata = video.extract_metadata()
+---
 
-# Available metadata keys:
+## Data Schemas
+
+### Video Metadata Schema
+
+```python
 video_details = {
     "title": None,
     "view_count": None,
@@ -193,20 +197,11 @@ video_details = {
 }
 ```
 
-### Comments Class
+---
+
+### Comments Schema
 
 ```python
-from NGTube import Comments
-
-comments = Comments("https://www.youtube.com/watch?v=VIDEO_ID")
-
-# Load all comments
-data = comments.get_comments()
-
-# Load limited number of comments (recommended for performance)
-data_limited = comments.get_comments(max_comments=100)
-
-# Returns dictionary with:
 comments_data = {
     "top_comment": {
         "author": None,
@@ -228,20 +223,11 @@ comments_data = {
 }
 ```
 
-### Channel Class
+---
+
+### Channel Profile Schema
 
 ```python
-from NGTube import Channel
-
-channel = Channel("https://www.youtube.com/@VIDEO_ID")
-
-# Extract profile with specific number of videos
-profile = channel.extract_profile(max_videos=50)
-
-# Extract profile with all videos (may take time)
-profile = channel.extract_profile(max_videos="all")
-
-# Available profile data:
 channel_data = {
     "featured_video": {
         "videoId": None,
@@ -287,29 +273,12 @@ channel_data = {
 }
 ```
 
-### Shorts Class
+---
+
+### Shorts Schema
 
 ```python
-from NGTube import Shorts, Comments
-
-shorts = Shorts()
-
-# Fetch a random short from YouTube's homepage
-short_data = shorts.fetch_short()
-
-# Fetch comments for the short (same as regular videos)
-comments_obj = Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}")
-comment_data = comments_obj.get_comments(max_comments=50)
-
-# Fetch multiple shorts from the Shorts feed (unlimited)
-shorts_feed = shorts.fetch_shorts_feed(max_shorts=50)
-
-print(short_data)
-print(comment_data)
-print(shorts_feed)
-
-# Available short data:
-available_short_data = {
+short_data = {
     "channel_name": None,
     "channel_handle": None,
     "channel_id": None,
@@ -328,187 +297,53 @@ available_short_data = {
     },
     "sequence_continuation": None
 }
-
-# Comments for shorts work exactly like regular videos:
-# Use Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}").get_comments(max_comments=N)
-comments_data = {
-    "top_comment": {
-        "author": None,
-        "text": None,
-        "dateCreated": None,
-        "url": None,
-        "alternateName": None,
-        "upvoteCount": None
-    },
-    "comments": {
-        "author": None,
-        "text": None,
-        "likeCount": None,
-        "publishedTimeText": None,
-        "authorThumbnail": None,
-        "commentId": None,
-        "replyCount": None
-    }
-}
-
-# Available shorts feed data:
-related_videos = {
-    "video_id": None,
-    "title": None,
-    "channel_name": None,
-    "thumbnail": {
-        "url": None,
-        "width": None,
-        "height": None
-    }
-}
 ```
 
-## Examples
+---
 
-See the `examples/` directory for complete working examples:
+## Country Filters
 
-- `basic_usage.py`: Extract video metadata and comments
-- `batch_processing.py`: Process multiple videos
-- `channel_usage.py`: Extract channel profile data
-- `shorts_usage.py`: Fetch random shorts from YouTube
-- `WEB/`: Web-based demo application showcasing all features
+Available presets:
 
-Run any example:
+* US – United States
+* DE – Germany
+* UK – United Kingdom
+* FR – France
+* ES – Spain
+* IT – Italy
+* JP – Japan
 
-```bash
-python examples/basic_usage.py
-```
+Each filter defines `hl` (language) and `gl` (region).
 
-### Web Demo
-
-For an interactive web interface:
-
-```bash
-cd examples/WEB
-pip install flask
-python app.py
-```
-
-Then open http://127.0.0.1:5000 in your browser to try all NGTube features through a user-friendly interface.
-
-#### Screenshots
-
-![Web Panel Home](images/web_panel_home.png)
-*Figure: Home page of the web panel with all tabs*
-
-![Video Tab](images/video_tab.png)
-*Figure: Video tab for metadata extraction*
-
-![Comments Tab](images/comments_tab.png)
-*Figure: Comments tab for comment extraction*
-
-![Shorts Tab](images/shorts_tab.png)
-*Figure: Shorts tab for random short videos extraction*
-
-![Channel Tab](images/channel_tab.png)
-*Figure: Channel tab for channel profile extraction*
-
-![Search Tab](images/search_tab.png)
-*Figure: Search tab for YouTube search*
-
-## API Reference
-
-### Core Classes
-
-#### YouTubeCore
-Base class for YouTube interactions.
-
-- `__init__(url: str)`: Initialize with YouTube URL
-- `fetch_html() -> str`: Fetch HTML content
-- `extract_ytinitialdata(html: str) -> dict`: Extract ytInitialData
-- `make_api_request(endpoint: str, payload: dict) -> dict`: Make API requests
-
-#### CountryFilters
-Predefined country filters for localization.
-
-- `US`: United States (hl: "en", gl: "US")
-- `DE`: Germany (hl: "de", gl: "DE")
-- `UK`: United Kingdom (hl: "en", gl: "GB")
-- `FR`: France (hl: "fr", gl: "FR")
-- `ES`: Spain (hl: "es", gl: "ES")
-- `IT`: Italy (hl: "it", gl: "IT")
-- `JP`: Japan (hl: "ja", gl: "JP")
-
-#### SearchFilters
-Predefined search filters.
-
-- `MOVIES`: Search for movies
-- `CHANNELS`: Search for channels
-- `PLAYLISTS`: Search for playlists
-- `VIDEOS_TODAY`: Videos uploaded today
-- `LAST_HOUR`: Videos uploaded in the last hour
-- `SORT_BY_DATE`: Sort results by upload date
-
-#### Video
-Extract video metadata.
-
-- `__init__(url: str)`: Initialize with video URL
-- `extract_metadata() -> dict`: Extract and return video metadata
-
-#### Comments
-Extract video comments.
-
-- `__init__(url: str)`: Initialize with video URL
-- `get_comments(max_comments: int = None) -> dict`: Extract and return comments data
-  - `max_comments`: Optional limit for number of comments to load (None = all available)
-
-#### Channel
-Extract channel profile and videos.
-
-- `__init__(url: str, country: dict = None)`: Initialize with channel URL and optional country filter
-- `extract_profile(max_videos: int | str = 200) -> dict`: Extract profile data
-  - `max_videos`: Number of videos to load, or 'all' for all videos
-
-#### Search
-Perform YouTube searches with filters.
-
-- `__init__(query: str, max_results: int = 50, filter: str = "", country: dict = None)`: Initialize search
-  - `query`: Search query string
-  - `max_results`: Maximum results to load
-  - `filter`: Search filter (use SearchFilters constants)
-  - `country`: Country filter (use CountryFilters constants)
-- `perform_search()`: Execute the search
-- `get_results() -> dict`: Get search results
-
-#### Shorts
-Fetch random shorts from YouTube.
-
-- `__init__(country: dict = None)`: Initialize with optional country filter
-- `fetch_short() -> dict`: Fetch a random short
-- `fetch_shorts_feed(max_shorts: int = 50) -> list`: Fetch multiple shorts from feed
-
-*Note: Comments for shorts work exactly like regular videos using the Comments class:
-`Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}").get_comments(max_comments=N)`*
-
-### Utils Module
-
-- `extract_number(text: str) -> int`: Extract numbers from text (handles German formatting)
-- `extract_links(text: str) -> list`: Extract URLs from text
+---
 
 ## Limitations
 
-- **Rate Limiting**: YouTube may rate-limit requests. Add delays between requests for bulk operations.
-- **Comment Limits**: Comments can be limited using the `max_comments` parameter in `get_comments(max_comments=N)`. Without limits, YouTube may restrict the number of comments loaded.
-- **Video Limits**: Channel video extraction may be limited by YouTube's pagination.
-- **Shorts Comments**: Shorts use the same comment system as regular videos, so unlimited comments are supported.
-- **Terms of Service**: This library is for educational purposes. Respect YouTube's Terms of Service and robots.txt.
+* YouTube may rate-limit requests
+* Internal APIs can change at any time
+* Loading all comments or videos can be slow
+* Shorts use the same comment system as normal videos
+
+Apply delays for large crawls.
+
+---
 
 ## Troubleshooting
 
-- **Import Errors**: Ensure NGTube folder is in your Python path
-- **API Errors**: YouTube changes their internal APIs frequently. The library uses current endpoints as of December 2025.
-- **Missing Data**: Some videos/channels may have restricted data access
+* Import errors → Ensure NGTube is installed correctly
+* Missing fields → Some videos restrict data
+* API errors → YouTube internal endpoints may change
+
+---
 
 ## Contributing
 
-This library is maintained for educational purposes. Feel free to submit issues or improvements.
+This project is maintained for educational purposes.
+
+Issues, improvements, and documentation suggestions are welcome.
+
+---
 
 ## License
 
-This project can be used by anyone with attribution.
+Free to use with attribution.
