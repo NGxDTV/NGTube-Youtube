@@ -12,4 +12,4 @@ from .search.search import Search, SearchFilters
 from .shorts.shorts import Shorts
 
 __version__ = "1.0.3"
-__author__ = "NGTube Team"
+__author__ = "NGxD TV"
