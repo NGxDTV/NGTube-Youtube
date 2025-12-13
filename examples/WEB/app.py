@@ -12,7 +12,7 @@ import os
 # Add parent directory to path for NGTube import
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from NGTube import Video, Comments, Channel, Search, SearchFilters
+from NGTube import Video, Comments, Channel, Search, SearchFilters, Shorts
 
 app = Flask(__name__)
 
@@ -48,7 +48,7 @@ def get_comments():
         limit = int(request.form.get('limit', 10))
 
         comments = Comments(url)
-        data = comments.get_comments()
+        data = comments.get_comments(max_comments=limit)
 
         # Limit comments
         data['comments'] = data['comments'][:limit]
@@ -56,6 +56,59 @@ def get_comments():
         return jsonify({
             'success': True,
             'data': data
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/shorts', methods=['POST'])
+def get_shorts():
+    try:
+        url = request.form.get('url')
+        limit_str = request.form.get('limit', '20')
+        limit = int(limit_str) if limit_str and limit_str.isdigit() else 20
+        is_random = request.form.get('random', 'false').lower() == 'true'
+
+        if is_random:
+            # Load random short
+            shorts = Shorts()
+            short_data = shorts.fetch_short()
+
+            # Extract video ID for comments
+            video_id = short_data.get('video_id')
+            if not video_id:
+                return jsonify({'error': 'Could not extract video ID from random short'})
+
+        else:
+            # Load specific short by URL
+            if not url:
+                return jsonify({'error': 'No URL provided'})
+
+            # Extract video ID from Shorts URL
+            if '/shorts/' in url:
+                video_id = url.split('/shorts/')[1].split('?')[0].split('&')[0]
+            else:
+                return jsonify({'error': 'Invalid Shorts URL format'})
+
+            # Create Shorts instance and fetch data
+            shorts = Shorts()
+            short_data = shorts.fetch_short()
+
+        # Load comments for the short using the normal Comments class
+        comments_obj = Comments(f"https://www.youtube.com/watch?v={video_id}")
+        comments_data = comments_obj.get_comments(max_comments=limit)
+        comments = comments_data['comments'][:limit]  # Apply limit
+
+        # Combine short data with comments
+        result = {
+            'short': short_data,
+            'comments': comments,
+            'total_comments': len(comments_data['comments']),
+            'all_comments': comments  # For now, just the limited comments
+        }
+
+        return jsonify({
+            'success': True,
+            'data': result
         })
     except Exception as e:
         return jsonify({'error': str(e)})
@@ -68,20 +121,20 @@ def get_channel():
             return jsonify({'error': 'No URL provided'})
         url = str(url)
         max_videos = int(request.form.get('max_videos', 5))
-        max_reels = int(request.form.get('max_reels', 5))
+        max_shorts = int(request.form.get('max_shorts', 5))
         max_playlists = int(request.form.get('max_playlists', 5))
 
         channel = Channel(url)
         profile = channel.extract_profile(max_videos=max_videos)
 
-        # Extract reels if requested
-        if max_reels > 0:
+        # Extract shorts if requested
+        if max_shorts > 0:
             try:
-                reels = channel.extract_reels(max_reels=max_reels)
-                profile['reels'] = reels
+                shorts = channel.extract_shorts(max_shorts=max_shorts)
+                profile['shorts'] = shorts
             except Exception as e:
-                profile['reels'] = []
-                print(f"Error extracting reels: {e}")
+                profile['shorts'] = []
+                print(f"Error extracting shorts: {e}")
 
         # Extract playlists if requested
         if max_playlists > 0:
@@ -98,7 +151,7 @@ def get_channel():
             'total_views': profile.get('total_views', 0),
             'video_count': profile.get('video_count', 0),
             'loaded_videos_count': len(profile.get('videos', [])),
-            'loaded_reels_count': len(profile.get('reels', [])),
+            'loaded_shorts_count': len(profile.get('shorts', [])),
             'loaded_playlists_count': len(profile.get('playlists', []))
         }
         profile['stats'] = stats

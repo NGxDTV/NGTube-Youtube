@@ -17,6 +17,7 @@
         <nav>
             <button class="tab-button active" onclick="showTab('video', event)">🎬 Video</button>
             <button class="tab-button" onclick="showTab('comments', event)">💬 Comments</button>
+            <button class="tab-button" onclick="showTab('shorts', event)">🎥 Shorts</button>
             <button class="tab-button" onclick="showTab('channel', event)">📺 Channel</button>
             <button class="tab-button" onclick="showTab('search', event)">🔎 Search</button>
         </nav>
@@ -49,6 +50,22 @@
             <div id="commentsResults" class="results"></div>
         </div>
 
+        <div id="shorts" class="tab-content">
+            <h2>Shorts Info</h2>
+            <div class="shorts-controls">
+                <form id="shortsForm">
+                    <div class="form-group">
+                        <label for="shortsLimit">Max Comments</label>
+                        <input type="number" id="shortsLimit" name="limit" value="" min="1" max="100" placeholder="20">
+                    </div>
+                </form>
+                <div class="random-shorts-section">
+                    <button id="randomShortsBtn" class="submit-btn random-btn">🎲 Load Random Short</button>
+                </div>
+            </div>
+            <div id="shortsResults" class="results"></div>
+        </div>
+
         <div id="channel" class="tab-content">
             <h2>Channel Profile</h2>
             <form id="channelForm">
@@ -61,8 +78,8 @@
                     <input type="number" id="maxVideos" name="max_videos" value="5" min="0" max="50">
                 </div>
                 <div class="form-group">
-                    <label for="maxReels">Max Reels/Shorts</label>
-                    <input type="number" id="maxReels" name="max_reels" value="5" min="0" max="50">
+                    <label for="maxShorts">Max Shorts</label>
+                    <input type="number" id="maxShorts" name="max_shorts" value="5" min="0" max="50">
                 </div>
                 <div class="form-group">
                     <label for="maxPlaylists">Max Playlists</label>

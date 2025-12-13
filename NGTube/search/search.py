@@ -8,8 +8,8 @@ from ..core import YouTubeCore
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import json
 import time
+from typing import Optional
 
 class SearchFilters:
     """
@@ -33,7 +33,7 @@ class Search:
         estimated_results (int): Estimated total results.
     """
 
-    def __init__(self, query: str, max_results: int = 50, filter: str = ""):
+    def __init__(self, query: str, max_results: int = 50, filter: str = "", country: Optional[dict] = None):
         """
         Initialize the Search with a query.
 
@@ -41,7 +41,12 @@ class Search:
             query (str): The search query.
             max_results (int): Maximum number of results to load.
             filter (str): Search filter, use SearchFilters constants or custom params string.
+            country (dict): Country filter with 'hl' and 'gl' keys, use CountryFilters constants.
         """
+        if country is None:
+            from ..core import CountryFilters
+            country = CountryFilters.US
+        self.country = country
         self.query = query
         self.max_results = max_results
         self.filter = filter
@@ -55,8 +60,8 @@ class Search:
         self.payload = {
             "context": {
                 "client": {
-                    "hl": "de",
-                    "gl": "DE",
+                    "hl": self.country["hl"],
+                    "gl": self.country["gl"],
                     "clientName": "WEB",
                     "clientVersion": self.client_version,
                     "visitorData": self.visitor_data

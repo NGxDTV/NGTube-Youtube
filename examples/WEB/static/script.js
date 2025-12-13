@@ -52,11 +52,56 @@ document.getElementById('commentsForm').addEventListener('submit', async (e) => 
     await submitForm('commentsForm', 'commentsResults', '/comments', renderComments);
 });
 
+document.getElementById('shortsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    currentShortsData = null;
+    currentDisplayedComments = 0;
+    await submitForm('shortsForm', 'shortsResults', '/shorts', renderShortsInfo);
+});
+
+// Random shorts button
+document.getElementById('randomShortsBtn').addEventListener('click', async () => {
+    const limit = document.getElementById('shortsLimit').value || '20';
+    const resultsDiv = document.getElementById('shortsResults');
+    // Show loading state
+    resultsDiv.innerHTML = '<div class="loading">LOADING RANDOM SHORT...</div>';
+    resultsDiv.classList.remove('error');
+
+    try {
+        const response = await fetch('/shorts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'random': 'true',
+                'limit': limit
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            resultsDiv.innerHTML = renderShortsInfo(data.data);
+        } else {
+            resultsDiv.innerHTML = `<div class="error">${escapeHtml(data.error || 'Unknown error')}</div>`;
+            resultsDiv.classList.add('error');
+        }
+    } catch (error) {
+        resultsDiv.innerHTML = `<div class="error">Network error: ${escapeHtml(error.message)}</div>`;
+        resultsDiv.classList.add('error');
+    }
+});
+
 // Store channel data globally for load more functionality
 let currentChannelData = null;
 let currentChannelUrl = null;
 let currentLoadedVideos = 0;
 let loadedVideoIds = new Set();
+
+// Store shorts data globally for load more comments functionality
+let currentShortsData = null;
+let currentDisplayedComments = 0;
 
 document.getElementById('channelForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -208,7 +253,7 @@ function renderChannelInfo(data) {
     const subscriberCount = stats.subscribers || 0;
     const videoCount = stats.video_count || 0;
     const loadedVideosCount = stats.loaded_videos_count || 0;
-    const loadedReelsCount = stats.loaded_reels_count || 0;
+    const loadedShortsCount = stats.loaded_shorts_count || 0;
     const loadedPlaylistsCount = stats.loaded_playlists_count || 0;
 
     // Get channel avatar - might be in different places
@@ -269,29 +314,29 @@ function renderChannelInfo(data) {
         `;
     }).join('');
 
-    // Render reels with thumbnails
-    const reelsHtml = data.reels && data.reels.length > 0 ? data.reels.map(reel => {
-        // Get reel thumbnail
-        const reelThumb = getBestThumbnail(reel.thumbnails, 320) || 
-                         (reel.videoId ? `https://i.ytimg.com/vi/${reel.videoId}/mqdefault.jpg` : null);
+    // Render shorts with thumbnails
+    const shortsHtml = data.shorts && data.shorts.length > 0 ? data.shorts.map(short => {
+        // Get short thumbnail
+        const shortThumb = getBestThumbnail(short.thumbnails, 320) || 
+                         (short.videoId ? `https://i.ytimg.com/vi/${short.videoId}/mqdefault.jpg` : null);
         
         return `
             <div class="video-item">
                 <div class="video-item-thumbnail">
-                    ${reelThumb ? 
-                        `<img src="${reelThumb}" alt="" onerror="this.parentElement.innerHTML='<div class=\\'no-thumbnail\\'></div>'">` :
+                    ${shortThumb ? 
+                        `<img src="${shortThumb}" alt="" onerror="this.parentElement.innerHTML='<div class=\\'no-thumbnail\\'></div>'">` :
                         '<div class="no-thumbnail"></div>'
                     }
-                    <span class="video-item-duration">REEL</span>
+                    <span class="video-item-duration">SHORT</span>
                 </div>
                 <div class="video-item-content">
-                    <div class="video-item-title">${escapeHtml(reel.title || 'Unknown Title')}</div>
+                    <div class="video-item-title">${escapeHtml(short.title || 'Unknown Title')}</div>
                     <div class="video-item-meta">
-                        <span>${reel.viewCountText || '0 views'}</span>
+                        <span>${short.viewCountText || '0 views'}</span>
                     </div>
                     <div class="video-item-actions">
-                        <button class="video-item-btn info-btn" onclick="openVideoInfo('${reel.videoId}')">🎬 Info</button>
-                        <button class="video-item-btn comments-btn" onclick="openVideoComments('${reel.videoId}')">💬 Comments</button>
+                        <button class="video-item-btn info-btn" onclick="openVideoInfo('${short.videoId}')">🎬 Info</button>
+                        <button class="video-item-btn comments-btn" onclick="openVideoComments('${short.videoId}')">💬 Comments</button>
                     </div>
                 </div>
             </div>
@@ -354,10 +399,10 @@ function renderChannelInfo(data) {
                     <div class="channel-stat-label">Loaded Videos</div>
                     <div class="channel-stat-value">${formatNumber(loadedVideosCount)}</div>
                 </div>
-                ${loadedReelsCount > 0 ? `
+                ${loadedShortsCount > 0 ? `
                 <div class="channel-stat">
-                    <div class="channel-stat-label">Loaded Reels</div>
-                    <div class="channel-stat-value">${formatNumber(loadedReelsCount)}</div>
+                    <div class="channel-stat-label">Loaded Shorts</div>
+                    <div class="channel-stat-value">${formatNumber(loadedShortsCount)}</div>
                 </div>
                 ` : ''}
                 ${loadedPlaylistsCount > 0 ? `
@@ -375,9 +420,9 @@ function renderChannelInfo(data) {
                 <button class="load-more-btn" onclick="loadMoreChannelVideos()" id="loadMoreBtn">+ Load More Videos</button>
             </div>
         ` : ''}
-        ${reelsHtml ? `
-            <div class="videos-section-title">Recent Reels (${data.reels.length})</div>
-            <div class="videos-grid">${reelsHtml}</div>
+        ${shortsHtml ? `
+            <div class="videos-section-title">Recent Shorts (${data.shorts.length})</div>
+            <div class="videos-grid">${shortsHtml}</div>
         ` : ''}
         ${playlistsHtml ? `
             <div class="videos-section-title">Recent Playlists (${data.playlists.length})</div>
@@ -486,6 +531,69 @@ async function loadMoreChannelVideos() {
     btn.disabled = false;
 }
 
+// Load more shorts comments
+function loadMoreShortsComments() {
+    if (!currentShortsData || !currentShortsData.all_comments) return;
+
+    const btn = document.getElementById('loadMoreShortsCommentsBtn');
+    const commentsContainer = document.querySelector('.shorts-comments');
+    
+    if (!btn || !commentsContainer) return;
+
+    // Calculate how many more comments to show (show 20 more each time)
+    const remainingComments = currentShortsData.all_comments.slice(currentDisplayedComments);
+    const commentsToAdd = remainingComments.slice(0, 20);
+    
+    if (commentsToAdd.length === 0) {
+        btn.style.display = 'none';
+        return;
+    }
+
+    // Render new comments
+    const newCommentsHtml = commentsToAdd.map(comment => {
+        const avatarUrl = comment.authorThumbnail || comment.author_thumbnail || comment.author?.avatar;
+        const avatarHtml = avatarUrl ?
+            `<img src="${avatarUrl}" alt="" class="comment-avatar" onerror="this.outerHTML='<div class=\\'comment-avatar-placeholder\\'>${(comment.author?.display_name || comment.author || 'A')[0].toUpperCase()}</div>'">` :
+            `<div class="comment-avatar-placeholder">${(comment.author?.display_name || comment.author || 'A')[0].toUpperCase()}</div>`;
+
+        const replyCount = comment.toolbar?.reply_count || comment.replyCount || comment.reply_count || 0;
+        const likeCount = comment.toolbar?.like_count || comment.likeCount || comment.like_count || 0;
+
+        return `
+            <div class="comment-item">
+                <div class="comment-author">${escapeHtml(comment.author?.display_name || comment.author || 'Anonymous')}</div>
+                <div class="comment-content">${escapeHtml(comment.content || comment.text || '')}</div>
+                <div class="comment-meta">
+                    <span class="comment-likes">${formatNumber(likeCount)} likes</span>
+                    ${replyCount > 0 ? `<span class="comment-replies">${formatNumber(replyCount)} replies</span>` : ''}
+                    <span>${comment.published_time || comment.publishedTimeText || comment.published_time_text || ''}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Insert new comments before the load more button
+    const loadMoreContainer = commentsContainer.querySelector('.load-more-container');
+    loadMoreContainer.insertAdjacentHTML('beforebegin', newCommentsHtml);
+
+    // Update displayed count
+    currentDisplayedComments += commentsToAdd.length;
+
+    // Update header
+    const header = commentsContainer.querySelector('h3');
+    if (header) {
+        header.textContent = `Comments (${currentDisplayedComments}/${currentShortsData.total_comments})`;
+    }
+
+    // Update button text or hide if no more comments
+    const stillRemaining = currentShortsData.total_comments - currentDisplayedComments;
+    if (stillRemaining > 0) {
+        btn.textContent = `+ Load More Comments (${stillRemaining} remaining)`;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
 function renderSearchResults(data) {
     if (!data || data.length === 0) {
         return '<div class="error">No search results found</div>';
@@ -568,6 +676,96 @@ function formatDuration(seconds) {
         return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Render shorts info with thumbnail and comments
+function renderShortsInfo(data) {
+    if (!data || !data.short) return '<div class="error">No shorts data received</div>';
+
+    const short = data.short;
+    const comments = data.comments || [];
+    const totalComments = data.total_comments || comments.length;
+    const allComments = data.all_comments || comments;
+
+    // Store data for load more functionality
+    currentShortsData = data;
+    currentDisplayedComments = comments.length;
+
+    // Get thumbnail
+    const thumbnail = getBestThumbnail(short.thumbnail, 720) ||
+                      (short.video_id ? `https://i.ytimg.com/vi/${short.video_id}/hqdefault.jpg` : null);
+
+    // Left side: Thumbnail with overlay
+    const mediaHtml = `
+        <div class="shorts-media">
+            <div class="shorts-thumbnail">
+                ${thumbnail ?
+                    `<img src="${thumbnail}" alt="Shorts Thumbnail" onerror="this.parentElement.innerHTML='<div class=\\'no-thumbnail\\'></div>'">` :
+                    '<div class="no-thumbnail"></div>'
+                }
+                <div class="shorts-overlay">
+                    <div class="shorts-title">${escapeHtml(short.title || 'Unknown Title')}</div>
+                    <div class="shorts-stats">
+                        <div class="shorts-stat">
+                            <span>❤️</span>
+                            <span>${formatNumber(short.like_count || 0)}</span>
+                        </div>
+                        <div class="shorts-stat">
+                            <span>👁️</span>
+                            <span>${formatNumber(short.view_count || 0)}</span>
+                        </div>
+                        <div class="shorts-stat">
+                            <span>💬</span>
+                            <span>${formatNumber(short.comment_count || totalComments)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Right side: Comments
+    const commentsHtml = comments.length > 0 ? comments.map(comment => {
+        const avatarUrl = comment.authorThumbnail || comment.author_thumbnail || comment.author?.avatar;
+        const avatarHtml = avatarUrl ?
+            `<img src="${avatarUrl}" alt="" class="comment-avatar" onerror="this.outerHTML='<div class=\\'comment-avatar-placeholder\\'>${(comment.author?.display_name || comment.author || 'A')[0].toUpperCase()}</div>'">` :
+            `<div class="comment-avatar-placeholder">${(comment.author?.display_name || comment.author || 'A')[0].toUpperCase()}</div>`;
+
+        const replyCount = comment.toolbar?.reply_count || comment.replyCount || comment.reply_count || 0;
+        const likeCount = comment.toolbar?.like_count || comment.likeCount || comment.like_count || 0;
+
+        return `
+            <div class="comment-item">
+                <div class="comment-author">${escapeHtml(comment.author?.display_name || comment.author || 'Anonymous')}</div>
+                <div class="comment-content">${escapeHtml(comment.content || comment.text || '')}</div>
+                <div class="comment-meta">
+                    <span class="comment-likes">${formatNumber(likeCount)} likes</span>
+                    ${replyCount > 0 ? `<span class="comment-replies">${formatNumber(replyCount)} replies</span>` : ''}
+                    <span>${comment.published_time || comment.publishedTimeText || comment.published_time_text || ''}</span>
+                </div>
+            </div>
+        `;
+    }).join('') : '<div class="comment-item"><div class="comment-content">No comments found</div></div>';
+
+    // Load more button if there are more comments
+    const loadMoreHtml = currentDisplayedComments < totalComments ? `
+        <div class="load-more-container">
+            <button class="load-more-btn" onclick="loadMoreShortsComments()" id="loadMoreShortsCommentsBtn">
+                + Load More Comments (${totalComments - currentDisplayedComments} remaining)
+            </button>
+        </div>
+    ` : '';
+
+    return `
+        <div class="shorts-layout">
+            ${mediaHtml}
+            <div class="shorts-comments">
+                <h3>Comments (${currentDisplayedComments}/${totalComments})</h3>
+                ${commentsHtml}
+                ${loadMoreHtml}
+            </div>
+        </div>
+    `;
 }
 
 function escapeHtml(text) {

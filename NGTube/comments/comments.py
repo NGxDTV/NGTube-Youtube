@@ -5,6 +5,7 @@ This module provides functionality to extract comments from YouTube videos.
 """
 
 import time
+from typing import Optional
 from ..core import YouTubeCore
 from .. import utils
 
@@ -18,13 +19,18 @@ class Comments:
         top_comments (list): List of top/pinned comments.
     """
 
-    def __init__(self, url: str):
+    def __init__(self, url: str, country: Optional[dict] = None):
         """
         Initialize the Comments with a URL.
 
         Args:
             url (str): The YouTube video URL.
+            country (dict): Country filter with 'hl' and 'gl' keys, use CountryFilters constants.
         """
+        if country is None:
+            from ..core import CountryFilters
+            country = CountryFilters.US
+        self.country = country
         self.url = url
         self.core = YouTubeCore(url)
         self.comments = []
@@ -123,12 +129,13 @@ class Comments:
                     find_top_comments(item)
         find_top_comments(data)
 
-    def load_more_comments(self, data: dict):
+    def load_more_comments(self, data: dict, max_comments: Optional[int] = None):
         """
         Load additional comments via YouTube's API.
 
         Args:
             data (dict): The ytInitialData JSON.
+            max_comments (int, optional): Maximum number of comments to load. If None, loads all available.
         """
         # Find continuation token and load more comments
         continuation_token = None
@@ -161,14 +168,14 @@ class Comments:
         if continuation_token:
             # Build payload and make API requests
             current_continuation = continuation_token
-            max_calls = 10
+            max_calls = 50  # Increased from 10 to allow loading more comments
             call_count = 0
-            while current_continuation and call_count < max_calls:
+            while current_continuation and call_count < max_calls and (max_comments is None or len(self.comments) < max_comments):
                 payload = {
                     "context": {
                         "client": {
-                            "hl": "de",
-                            "gl": "DE",
+                            "hl": self.country["hl"],
+                            "gl": self.country["gl"],
                             "clientName": "WEB",
                             "clientVersion": "2.20251208.06.00",
                             "visitorData": self.visitor_data
@@ -211,38 +218,45 @@ class Comments:
 
                 time.sleep(0.5)
 
-                # Find next continuation
+                # Find next continuation - direct path approach
                 next_continuation = None
-                def find_next_continuation(obj):
-                    nonlocal next_continuation
-                    if isinstance(obj, dict):
-                        if 'reloadContinuationItemsCommand' in obj:
-                            cmd = obj['reloadContinuationItemsCommand']
+
+                # Check onResponseReceivedEndpoints directly
+                endpoints = api_data.get('onResponseReceivedEndpoints', [])
+                for endpoint in endpoints:
+                    if isinstance(endpoint, dict):
+                        # Check for appendContinuationItemsAction
+                        if 'appendContinuationItemsAction' in endpoint:
+                            continuation_items = endpoint['appendContinuationItemsAction'].get('continuationItems', [])
+                            if continuation_items and isinstance(continuation_items[-1], dict) and 'continuationItemRenderer' in continuation_items[-1]:
+                                endpoint_obj = continuation_items[-1]['continuationItemRenderer'].get('continuationEndpoint', {})
+                                command = endpoint_obj.get('continuationCommand', {})
+                                token = command.get('token')
+                                if token:
+                                    next_continuation = token
+                                    break
+                        # Check for reloadContinuationItemsCommand
+                        elif 'reloadContinuationItemsCommand' in endpoint:
+                            cmd = endpoint['reloadContinuationItemsCommand']
                             if cmd.get('targetId') == 'engagement-panel-comments-section':
                                 continuation_items = cmd.get('continuationItems', [])
-                                for item in continuation_items:
+                                for item in reversed(continuation_items):
                                     if isinstance(item, dict) and 'continuationItemRenderer' in item:
-                                        endpoint = item['continuationItemRenderer'].get('continuationEndpoint', {})
-                                        command = endpoint.get('continuationCommand', {})
+                                        endpoint_obj = item['continuationItemRenderer'].get('continuationEndpoint', {})
+                                        command = endpoint_obj.get('continuationCommand', {})
                                         token = command.get('token')
                                         if token:
                                             next_continuation = token
-                                            return True
-                        for v in obj.values():
-                            if find_next_continuation(v):
-                                return True
-                    elif isinstance(obj, list):
-                        for item in obj:
-                            if find_next_continuation(item):
-                                return True
-                    return False
-                find_next_continuation(api_data)
+                                            break
                 current_continuation = next_continuation
                 call_count += 1
 
-    def get_comments(self) -> dict:
+    def get_comments(self, max_comments: Optional[int] = None) -> dict:
         """
         Get all available comments for the video, separated into top comments and regular comments.
+
+        Args:
+            max_comments (int, optional): Maximum number of comments to load. If None, loads all available.
 
         Returns:
             dict: Dictionary with 'top_comment' and 'comments' lists.
@@ -250,7 +264,7 @@ class Comments:
         html = self.core.fetch_html()
         data = self.core.extract_ytinitialdata(html)
         self.extract_initial_comments(data)
-        self.load_more_comments(data)
+        self.load_more_comments(data, max_comments)
         return {
             'top_comment': self.top_comments,
             'comments': self.comments
