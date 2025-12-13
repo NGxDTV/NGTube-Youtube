@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="NGTube",
-    version="1.0.4",
+    version="1.0.3",
     author="NGxD TV",
     author_email="",
     description="A Python library for scraping YouTube video, channel, search, and shorts data",
