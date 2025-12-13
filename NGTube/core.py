@@ -5,6 +5,8 @@ This module provides the core functionality for interacting with YouTube.
 """
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import re
 import demjson3 as demjson
 
@@ -25,6 +27,8 @@ class YouTubeCore:
             url (str): The YouTube URL.
         """
         self.url = url
+        self._cached_html = None
+        self._client_version = None
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
@@ -35,6 +39,23 @@ class YouTubeCore:
             'CONSENT': 'PENDING+987',
             'SOCS': 'CAISHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg'
         }
+        self.session = self._init_session()
+
+    def _init_session(self) -> requests.Session:
+        """Create a requests session with basic retry and shared headers/cookies."""
+        session = requests.Session()
+        session.headers.update(self.headers)
+        retries = Retry(
+            total=3,
+            backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=("GET", "POST"),
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        session.cookies.update(self.cookies)
+        return session
 
     def fetch_html(self) -> str:
         """
@@ -43,11 +64,15 @@ class YouTubeCore:
         Returns:
             str: The HTML content.
         """
-        response = requests.get(self.url, headers=self.headers, cookies=self.cookies)
-        if response.status_code == 200:
-            return response.text
-        else:
+        if self._cached_html:
+            return self._cached_html
+
+        response = self.session.get(self.url, timeout=10)
+        if response.status_code != 200:
             raise Exception(f"Failed to fetch HTML: {response.status_code}")
+
+        self._cached_html = response.text
+        return self._cached_html
 
     def extract_ytinitialdata(self, html: str) -> dict:
         """
@@ -155,6 +180,37 @@ class YouTubeCore:
         else:
             raise Exception("ytInitialPlayerResponse not found in HTML")
 
+    def extract_visitor_data(self, html: str) -> str:
+        """
+        Extract visitorData from HTML.
+
+        Args:
+            html (str): The HTML content.
+
+        Returns:
+            str: The visitorData string.
+        """
+        try:
+            yt_initial_data = self.extract_ytinitialdata(html)
+            def find_visitor_data(obj):
+                if isinstance(obj, dict):
+                    if 'responseContext' in obj and 'visitorData' in obj['responseContext']:
+                        return obj['responseContext']['visitorData']
+                    for v in obj.values():
+                        result = find_visitor_data(v)
+                        if result:
+                            return result
+                elif isinstance(obj, list):
+                    for item in obj:
+                        result = find_visitor_data(item)
+                        if result:
+                            return result
+                return None
+            visitor_data = find_visitor_data(yt_initial_data)
+            return visitor_data or ""
+        except:
+            return ""
+
     def make_api_request(self, endpoint: str, payload: dict) -> dict:
         """
         Make a POST request to YouTube's internal API.
@@ -166,8 +222,24 @@ class YouTubeCore:
         Returns:
             dict: The API response JSON.
         """
-        response = requests.post(endpoint, json=payload, headers=self.headers)
+        response = self.session.post(endpoint, json=payload, timeout=10)
         if response.status_code == 200:
             return response.json()
         else:
             raise Exception(f"API request failed: {response.status_code}")
+
+    def get_client_version(self, fallback: str = "2.20251208.06.00") -> str:
+        """
+        Extract clientVersion from the page HTML, with optional fallback.
+        """
+        if self._client_version:
+            return self._client_version
+        try:
+            html = self.fetch_html()
+            match = re.search(r'"clientVersion"\s*:\s*"([^"]+)"', html)
+            if match:
+                self._client_version = match.group(1)
+                return self._client_version
+        except Exception:
+            pass
+        return fallback

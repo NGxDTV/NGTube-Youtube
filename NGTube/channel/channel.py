@@ -28,6 +28,7 @@ class Channel:
         self.url = url
         self.core = YouTubeCore(url)
         self.data = {}
+        self.visitor_data = self.core.extract_visitor_data(self.core.fetch_html())
 
     def extract_profile(self, max_videos: Union[int, str] = 200) -> dict:
         """
@@ -74,6 +75,152 @@ class Channel:
         self._extract_numbers()
 
         return self.data
+
+    def extract_reels(self, max_reels: Union[int, str] = 200) -> list:
+        """
+        Extract channel reels/shorts.
+
+        Args:
+            max_reels (int | str): Maximum number of reels to load. Use 'all' to load all reels.
+        """
+        # API URL
+        api_url = "https://www.youtube.com/youtubei/v1/browse"
+
+        # Extract channel ID from URL
+        channel_id = self._extract_channel_id()
+
+        # Payload for Reels Tab
+        payload_reels = self._get_payload_reels(channel_id)
+
+        # Make API request for reels tab
+        try:
+            data_reels = self.core.make_api_request(api_url, payload_reels)
+        except Exception as e:
+            raise ValueError(f"Failed to fetch reels data: {e}")
+
+        # Extract reels
+        reels = self._extract_reels_data(data_reels, max_reels)
+        return reels
+
+    def extract_playlists(self, max_playlists: Union[int, str] = 200) -> list:
+        """
+        Extract channel playlists.
+
+        Args:
+            max_playlists (int | str): Maximum number of playlists to load. Use 'all' to load all playlists.
+        """
+        # API URL
+        api_url = "https://www.youtube.com/youtubei/v1/browse"
+
+        # Extract channel ID from URL
+        channel_id = self._extract_channel_id()
+
+        # Payload for Playlists Tab
+        payload_playlists = self._get_payload_playlists(channel_id)
+
+        # Make API request for playlists tab
+        try:
+            data_playlists = self.core.make_api_request(api_url, payload_playlists)
+        except Exception as e:
+            raise ValueError(f"Failed to fetch playlists data: {e}")
+
+        # Extract playlists
+        playlists = self._extract_playlists_data(data_playlists, max_playlists)
+        return playlists
+
+    def _extract_reels_data(self, data: dict, max_reels: Union[int, str]) -> list:
+        """Extract reels data from API response."""
+        reels = self._find_reels(data)
+        if max_reels != 'all' and isinstance(max_reels, int):
+            reels = reels[:max_reels]
+        return reels
+
+    def _extract_playlists_data(self, data: dict, max_playlists: Union[int, str]) -> list:
+        """Extract playlists data from API response."""
+        playlists = self._find_playlists(data)
+        if max_playlists != 'all' and isinstance(max_playlists, int):
+            playlists = playlists[:max_playlists]
+        return playlists
+
+    def _find_reels(self, obj):
+        """Find reels in the data structure."""
+        reels = []
+        if isinstance(obj, dict):
+            if 'richGridRenderer' in obj and 'contents' in obj['richGridRenderer']:
+                for item in obj['richGridRenderer']['contents']:
+                    if 'richItemRenderer' in item and 'content' in item['richItemRenderer']:
+                        content = item['richItemRenderer']['content']
+                        if 'shortsLockupViewModel' in content:
+                            slvm = content['shortsLockupViewModel']
+                            # Extract videoId from onTap.reelWatchEndpoint.videoId
+                            video_id = None
+                            if 'onTap' in slvm and 'innertubeCommand' in slvm['onTap'] and 'reelWatchEndpoint' in slvm['onTap']['innertubeCommand']:
+                                video_id = slvm['onTap']['innertubeCommand']['reelWatchEndpoint'].get('videoId')
+                            # Extract title from overlayMetadata.primaryText
+                            overlay = slvm.get('overlayMetadata', {})
+                            title = overlay.get('primaryText', {}).get('content', '')
+                            # Extract viewCountText from overlayMetadata.secondaryText
+                            view_count_text = overlay.get('secondaryText', {}).get('content', '')
+                            # Extract viewCount as int
+                            view_count = utils.extract_number(view_count_text) if view_count_text else 0
+                            # Extract thumbnails from thumbnailViewModel
+                            thumbnail_view = slvm.get('thumbnailViewModel', {}).get('thumbnailViewModel', {}).get('image', {}).get('sources', [])
+                            reel = {
+                                'videoId': video_id,
+                                'title': title,
+                                'viewCountText': view_count_text,
+                                'viewCount': view_count,
+                                'thumbnails': thumbnail_view
+                            }
+                            reels.append(reel)
+            # Recurse
+            for v in obj.values():
+                reels.extend(self._find_reels(v))
+        elif isinstance(obj, list):
+            for item in obj:
+                reels.extend(self._find_reels(item))
+        return reels
+
+    def _find_playlists(self, obj):
+        """Find playlists in the data structure."""
+        playlists = []
+        if isinstance(obj, dict):
+            if 'gridRenderer' in obj and 'items' in obj['gridRenderer']:
+                for item in obj['gridRenderer']['items']:
+                    if 'lockupViewModel' in item:
+                        lvm = item['lockupViewModel']
+                        # Extract playlistId from contentId
+                        playlist_id = lvm.get('contentId', '')
+                        # Extract title from metadata.lockupMetadataViewModel.title
+                        title = lvm.get('metadata', {}).get('lockupMetadataViewModel', {}).get('title', {}).get('content', '')
+                        # Extract thumbnails from contentImage.collectionThumbnailViewModel.primaryThumbnail.thumbnailViewModel.image.sources
+                        thumbnails = lvm.get('contentImage', {}).get('collectionThumbnailViewModel', {}).get('primaryThumbnail', {}).get('thumbnailViewModel', {}).get('image', {}).get('sources', [])
+                        # Extract videoCount from thumbnailOverlayBadgeViewModel.thumbnailBadges[0].text
+                        video_count_text = ''
+                        overlays = lvm.get('contentImage', {}).get('collectionThumbnailViewModel', {}).get('primaryThumbnail', {}).get('thumbnailViewModel', {}).get('overlays', [])
+                        for overlay in overlays:
+                            if 'thumbnailOverlayBadgeViewModel' in overlay:
+                                badges = overlay['thumbnailOverlayBadgeViewModel'].get('thumbnailBadges', [])
+                                if badges:
+                                    video_count_text = badges[0].get('thumbnailBadgeViewModel', {}).get('text', '')
+                                    break
+                        # Extract videoCount as int
+                        video_count = utils.extract_number(video_count_text) if video_count_text else 0
+                        playlist = {
+                            'playlistId': playlist_id,
+                            'title': title,
+                            'videoCountText': video_count_text,
+                            'videoCount': video_count,
+                            'thumbnails': thumbnails
+                        }
+                        playlists.append(playlist)
+            # Recurse
+            for v in obj.values():
+                playlists.extend(self._find_playlists(v))
+        elif isinstance(obj, list):
+            for item in obj:
+                playlists.extend(self._find_playlists(item))
+        return playlists
 
     def _extract_channel_id(self) -> str:
         """Extract channel ID from URL by fetching the channel page."""
@@ -149,7 +296,8 @@ class Channel:
                     "hl": "en",
                     "gl": "US",
                     "clientName": "WEB",
-                    "clientVersion": "2.20230801.01.00"
+                    "clientVersion": "2.20251208.06.00",
+                    "visitorData": self.visitor_data
                 }
             },
             "browseId": channel_id
@@ -163,11 +311,44 @@ class Channel:
                     "hl": "en",
                     "gl": "US",
                     "clientName": "WEB",
-                    "clientVersion": "2.20230801.01.00"
+                    "clientVersion": "2.20251208.06.00",
+                    "visitorData": self.visitor_data
                 }
             },
             "browseId": channel_id,
             "params": "EgZ2aWRlb3PyBgQKAjoA"
+        }
+
+    def _get_payload_reels(self, channel_id: str) -> dict:
+        """Get payload for reels/shorts tab."""
+        return {
+            "context": {
+                "client": {
+                    "hl": "en",
+                    "gl": "US",
+                    "clientName": "WEB",
+                    "clientVersion": "2.20251208.06.00",
+                    "visitorData": self.visitor_data
+                }
+            },
+            "browseId": channel_id,
+            "params": "EgZzaG9ydHPyBgUKA5oBAA%3D%3D"
+        }
+
+    def _get_payload_playlists(self, channel_id: str) -> dict:
+        """Get payload for playlists tab."""
+        return {
+            "context": {
+                "client": {
+                    "hl": "en",
+                    "gl": "US",
+                    "clientName": "WEB",
+                    "clientVersion": "2.20251208.06.00",
+                    "visitorData": self.visitor_data
+                }
+            },
+            "browseId": channel_id,
+            "params": "EglwbGF5bGlzdHPyBgQKAkIA"
         }
 
     def _extract_profile_data(self, data: dict):
@@ -183,6 +364,8 @@ class Channel:
                     self.data['keywords'] = cmr.get('keywords', '')
                     self.data['isFamilySafe'] = cmr.get('isFamilySafe', False)
                     self.data['links'] = utils.extract_links(self.data.get('description', ''))
+                    if 'avatar' in cmr and 'thumbnails' in cmr['avatar']:
+                        self.data['avatar'] = cmr['avatar']['thumbnails']
                     return True
                 if 'channelHeaderRenderer' in obj:
                     chr = obj['channelHeaderRenderer']
@@ -194,6 +377,33 @@ class Channel:
                             self.data['videoCountText'] = vct['simpleText']
                         elif 'runs' in vct and vct['runs']:
                             self.data['videoCountText'] = vct['runs'][0].get('text', '')
+                    return True
+                if 'c4TabbedHeaderRenderer' in obj:
+                    c4thr = obj['c4TabbedHeaderRenderer']
+                    if 'banner' in c4thr and 'imageBannerViewModel' in c4thr['banner']:
+                        banner_vm = c4thr['banner']['imageBannerViewModel']
+                        if 'image' in banner_vm and 'sources' in banner_vm['image']:
+                            self.data['banner'] = banner_vm['image']['sources']
+                    return True
+                if 'pageHeaderViewModel' in obj:
+                    phvm = obj['pageHeaderViewModel']
+                    if 'banner' in phvm and 'imageBannerViewModel' in phvm['banner']:
+                        banner_vm = phvm['banner']['imageBannerViewModel']
+                        if 'image' in banner_vm and 'sources' in banner_vm['image']:
+                            self.data['banner'] = banner_vm['image']['sources']
+                    # Extract metadata from contentMetadataViewModel
+                    if 'metadata' in phvm and 'contentMetadataViewModel' in phvm['metadata']:
+                        cmvm = phvm['metadata']['contentMetadataViewModel']
+                        if 'metadataRows' in cmvm and isinstance(cmvm['metadataRows'], list):
+                            for row in cmvm['metadataRows']:
+                                if 'metadataParts' in row and isinstance(row['metadataParts'], list):
+                                    for part in row['metadataParts']:
+                                        if 'text' in part and 'content' in part['text']:
+                                            content = part['text']['content']
+                                            if 'subscribers' in content.lower():
+                                                self.data['subscriberCountText'] = content
+                                            elif 'videos' in content.lower() or 'video' in content.lower():
+                                                self.data['videoCountText'] = content
                     return True
                 if 'videoCountText' in obj:
                     vct = obj['videoCountText']
@@ -251,7 +461,8 @@ class Channel:
                         "hl": "en",
                         "gl": "US",
                         "clientName": "WEB",
-                        "clientVersion": "2.20241205.01.00"
+                        "clientVersion": "2.20251208.06.00",
+                        "visitorData": self.visitor_data
                     }
                 },
                 "continuation": continuation_token
@@ -368,6 +579,40 @@ class Channel:
                 videos.extend(self._find_videos(item))
         return videos
 
+    def _find_reels(self, obj):
+        """Find reels in the data structure."""
+        reels = []
+        if isinstance(obj, dict):
+            if 'richGridRenderer' in obj and 'contents' in obj['richGridRenderer']:
+                for item in obj['richGridRenderer']['contents']:
+                    if 'richItemRenderer' in item and 'content' in item['richItemRenderer']:
+                        content = item['richItemRenderer']['content']
+                        if 'shortsLockupViewModel' in content:
+                            slvm = content['shortsLockupViewModel']
+                            # Extract videoId from onTap.reelWatchEndpoint.videoId
+                            video_id = None
+                            if 'onTap' in slvm and 'innertubeCommand' in slvm['onTap'] and 'reelWatchEndpoint' in slvm['onTap']['innertubeCommand']:
+                                video_id = slvm['onTap']['innertubeCommand']['reelWatchEndpoint'].get('videoId')
+                            # Extract title from overlayMetadata.primaryText
+                            overlay = slvm.get('overlayMetadata', {})
+                            title = overlay.get('primaryText', {}).get('content', '')
+                            # Extract viewCountText from overlayMetadata.secondaryText
+                            view_count_text = overlay.get('secondaryText', {}).get('content', '')
+                            reel = {
+                                'videoId': video_id,
+                                'title': title,
+                                'viewCountText': view_count_text,
+                                'viewCount': utils.extract_number(view_count_text),
+                                'thumbnails': slvm.get('onTap', {}).get('innertubeCommand', {}).get('reelWatchEndpoint', {}).get('thumbnail', {}).get('thumbnails', [])
+                            }
+                            reels.append(reel)
+            # Recurse
+            for v in obj.values():
+                reels.extend(self._find_reels(v))
+        elif isinstance(obj, list):
+            for item in obj:
+                reels.extend(self._find_reels(item))
+        return reels
     def _find_continuation_token(self, obj):
         """Find continuation token in the data structure."""
         if isinstance(obj, dict):
