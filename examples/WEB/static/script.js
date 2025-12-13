@@ -61,9 +61,8 @@ document.getElementById('shortsForm').addEventListener('submit', async (e) => {
 
 // Random shorts button
 document.getElementById('randomShortsBtn').addEventListener('click', async () => {
-    const limit = document.getElementById('shortsLimit').value;
+    const limit = document.getElementById('shortsLimit').value || '20';
     const resultsDiv = document.getElementById('shortsResults');
-
     // Show loading state
     resultsDiv.innerHTML = '<div class="loading">LOADING RANDOM SHORT...</div>';
     resultsDiv.classList.remove('error');

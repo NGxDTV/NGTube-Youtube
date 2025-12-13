@@ -140,7 +140,7 @@ class Shorts:
                 title_header = header.get("engagementPanelTitleHeaderRenderer", {})
                 title = title_header.get("title", {})
                 runs = title.get("runs", [])
-                if runs and "Kommentar" in runs[0].get("text", ""):
+                if runs and ("Kommentar" in runs[0].get("text", "") or "Comments" in runs[0].get("text", "")):
                     contextual_info = title_header.get("contextualInfo", {})
                     info_runs = contextual_info.get("runs", [])
                     if info_runs:
@@ -286,92 +286,6 @@ class Shorts:
                 sequence_continuation = ''
         
         return shorts_list
-
-    def fetch_comments(self, continuation_token: str | None = None) -> list:
-        """
-        Fetch comments for the current short.
-
-        Args:
-            continuation_token (str): The continuation token for comments. If None, uses the token from the short data.
-
-        Returns:
-            list: A list of comment dictionaries.
-        """
-        if continuation_token is None:
-            continuation_token = self.data.get("comments_continuation", "")
-        
-        if not continuation_token:
-            return []
-
-        endpoint = "https://www.youtube.com/youtubei/v1/browse"
-        
-        payload = {
-            "context": {
-                "client": {
-                    "hl": self.country["hl"],
-                    "gl": self.country["gl"],
-                    "visitorData": self.visitor_data,
-                    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 OPR/124.0.0.0,gzip(gfe)",
-                    "clientName": "WEB",
-                    "clientVersion": self.client_version,
-                    "osName": "Windows",
-                    "osVersion": "10.0",
-                    "originalUrl": "https://www.youtube.com/",
-                    "platform": "DESKTOP"
-                },
-                "request": {
-                    "useSsl": True
-                }
-            },
-            "continuation": continuation_token
-        }
-
-        response = self.core.make_api_request(endpoint, payload)
-        
-        return self._parse_comments_response(response)
-
-    def _parse_comments_response(self, response: dict) -> list:
-        """
-        Parse the comments API response.
-
-        Args:
-            response (dict): The API response JSON.
-
-        Returns:
-            list: List of parsed comment dictionaries.
-        """
-        comments = []
-        
-        framework_updates = response.get("frameworkUpdates", {})
-        entity_batch_update = framework_updates.get("entityBatchUpdate", {})
-        mutations = entity_batch_update.get("mutations", [])
-        
-        for mutation in mutations:
-            if "commentEntityPayload" in mutation.get("payload", {}):
-                comment_payload = mutation["payload"]["commentEntityPayload"]
-                properties = comment_payload.get("properties", {})
-                
-                comment = {
-                    "comment_id": properties.get("commentId", ""),
-                    "content": properties.get("content", {}).get("content", ""),
-                    "published_time": properties.get("publishedTime", ""),
-                    "reply_level": properties.get("replyLevel", 0),
-                    "author": {
-                        "channel_id": comment_payload.get("author", {}).get("channelId", ""),
-                        "display_name": comment_payload.get("author", {}).get("displayName", ""),
-                        "avatar_thumbnail_url": comment_payload.get("author", {}).get("avatarThumbnailUrl", ""),
-                        "is_verified": comment_payload.get("author", {}).get("isVerified", False),
-                        "is_creator": comment_payload.get("author", {}).get("isCreator", False)
-                    },
-                    "toolbar": {
-                        "like_count": self._parse_number(comment_payload.get("toolbar", {}).get("likeCountLiked", "0")),
-                        "reply_count": self._parse_number(comment_payload.get("toolbar", {}).get("replyCount", "0"))
-                    }
-                }
-                
-                comments.append(comment)
-        
-        return comments
 
     def _parse_number(self, text: str) -> int:
         """

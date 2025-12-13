@@ -64,7 +64,8 @@ def get_comments():
 def get_shorts():
     try:
         url = request.form.get('url')
-        limit = int(request.form.get('limit', 20))
+        limit_str = request.form.get('limit', '20')
+        limit = int(limit_str) if limit_str and limit_str.isdigit() else 20
         is_random = request.form.get('random', 'false').lower() == 'true'
 
         if is_random:
@@ -92,19 +93,17 @@ def get_shorts():
             shorts = Shorts()
             short_data = shorts.fetch_short()
 
-        # Load ALL comments for the short (no limit for load more functionality)
-        comments = Comments(f"https://www.youtube.com/watch?v={video_id}")
-        comments_data = comments.get_comments()
-
-        # For initial display, limit comments but send all
-        initial_comments = comments_data['comments'][:limit]
+        # Load comments for the short using the normal Comments class
+        comments_obj = Comments(f"https://www.youtube.com/watch?v={video_id}")
+        comments_data = comments_obj.get_comments()
+        comments = comments_data['comments'][:limit]  # Apply limit
 
         # Combine short data with comments
         result = {
             'short': short_data,
-            'comments': initial_comments,
+            'comments': comments,
             'total_comments': len(comments_data['comments']),
-            'all_comments': comments_data['comments']  # Send all comments for load more
+            'all_comments': comments  # For now, just the limited comments
         }
 
         return jsonify({

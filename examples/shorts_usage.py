@@ -35,9 +35,12 @@ def main():
         print()
 
         # Fetch comments for the short
-        if short_data.get('comments_continuation'):
+        if short_data.get('video_id'):
             print("Fetching comments...")
-            comments = shorts.fetch_comments()
+            from NGTube import Comments
+            comments_obj = Comments(f"https://www.youtube.com/watch?v={short_data['video_id']}")
+            comments_data = comments_obj.get_comments()
+            comments = comments_data['comments']
             print(f"Found {len(comments)} comments")
             print()
 
