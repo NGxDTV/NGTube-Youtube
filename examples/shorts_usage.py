@@ -47,11 +47,11 @@ def main():
             # Display first few comments
             for i, comment in enumerate(comments[:5]):  # Show first 5 comments
                 print(f"Comment {i+1}:")
-                print(f"  Author: {comment['author']['display_name']}")
-                print(f"  Content: {comment['content'][:100]}{'...' if len(comment['content']) > 100 else ''}")
-                print(f"  Published: {comment['published_time']}")
-                print(f"  Likes: {comment['toolbar']['like_count']}")
-                print(f"  Replies: {comment['toolbar']['reply_count']}")
+                print(f"  Author: {comment['author']}")
+                print(f"  Content: {comment['text'][:100]}{'...' if len(comment['text']) > 100 else ''}")
+                print(f"  Published: {comment['publishedTimeText']}")
+                print(f"  Likes: {comment['likeCount']}")
+                print(f"  Replies: {comment['replyCount']}")
                 print()
 
             # Save to JSON
