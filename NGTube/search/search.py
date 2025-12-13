@@ -6,7 +6,10 @@ This module provides functionality to search YouTube and extract search results.
 
 from ..core import YouTubeCore
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import json
+import time
 
 class SearchFilters:
     """
@@ -68,6 +71,23 @@ class Search:
             "Content-Type": "application/json",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 OPR/124.0.0.0"
         }
+        self.timeout = 10
+        self.session = self._init_session()
+
+    def _init_session(self) -> requests.Session:
+        """Create a session with retries to reduce transient failures."""
+        session = requests.Session()
+        session.headers.update(self.headers)
+        retries = Retry(
+            total=3,
+            backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=("GET", "POST"),
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
 
     def perform_search(self):
         """
@@ -77,7 +97,7 @@ class Search:
         while len(self.results) < self.max_results:
             if continuation:
                 self.payload["continuation"] = continuation
-            response = requests.post(self.url, json=self.payload, headers=self.headers)
+            response = self.session.post(self.url, json=self.payload, timeout=self.timeout)
             if response.status_code != 200:
                 break
             data = response.json()
@@ -88,6 +108,7 @@ class Search:
             continuation = cont
             if not continuation:
                 break
+            time.sleep(0.3)
 
     def _parse_results(self, data):
         if not data:
@@ -122,6 +143,7 @@ class Search:
                             "subscriberCount": channel.get("videoCountText", {}).get("simpleText"),  # Note: This seems to be videoCount in the data
                             "thumbnail": channel.get("thumbnail", {}).get("thumbnails", [{}])[0].get("url")
                         }
+                        items.append(channel_info)
                     elif "movieRenderer" in content:
                         movie = content["movieRenderer"]
                         movie_info = {

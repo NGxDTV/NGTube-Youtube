@@ -4,6 +4,7 @@ NGTube Comments Module
 This module provides functionality to extract comments from YouTube videos.
 """
 
+import time
 from ..core import YouTubeCore
 from .. import utils
 
@@ -207,6 +208,8 @@ class Comments:
                 comments_after = len(self.comments)
                 if comments_after == comments_before:
                     break  # No new comments
+
+                time.sleep(0.5)
 
                 # Find next continuation
                 next_continuation = None

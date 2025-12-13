@@ -5,6 +5,8 @@ This module provides the core functionality for interacting with YouTube.
 """
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import re
 import demjson3 as demjson
 
@@ -35,6 +37,23 @@ class YouTubeCore:
             'CONSENT': 'PENDING+987',
             'SOCS': 'CAISHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmRlIAEaBgiAo_CmBg'
         }
+        self.session = self._init_session()
+
+    def _init_session(self) -> requests.Session:
+        """Create a requests session with basic retry and shared headers/cookies."""
+        session = requests.Session()
+        session.headers.update(self.headers)
+        retries = Retry(
+            total=3,
+            backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=("GET", "POST"),
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        session.cookies.update(self.cookies)
+        return session
 
     def fetch_html(self) -> str:
         """
@@ -43,7 +62,7 @@ class YouTubeCore:
         Returns:
             str: The HTML content.
         """
-        response = requests.get(self.url, headers=self.headers, cookies=self.cookies)
+        response = self.session.get(self.url, timeout=10)
         if response.status_code == 200:
             return response.text
         else:
@@ -197,7 +216,7 @@ class YouTubeCore:
         Returns:
             dict: The API response JSON.
         """
-        response = requests.post(endpoint, json=payload, headers=self.headers)
+        response = self.session.post(endpoint, json=payload, timeout=10)
         if response.status_code == 200:
             return response.json()
         else:

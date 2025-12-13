@@ -13,3 +13,7 @@ search_results.json
 search_example_results.json
 Youtube-Search.py
 search_filtered_example.json
+*.pyc
+*.pyo
+__pycache__/
+example_output.json
