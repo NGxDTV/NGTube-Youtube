@@ -89,6 +89,7 @@ pip install NGTube
 ```
 
 ![Python](https://img.shields.io/pypi/pyversions/NGTube?style=flat)
+
 Python 3.6+ is required.
 
 Dependencies:
